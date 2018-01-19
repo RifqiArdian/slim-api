@@ -17,7 +17,8 @@ $app->get('/[{name}]', function (Request $request, Response $response, array $ar
 $app->get("/books/", function (Request $request, Response $response){
     $sql = "SELECT * FROM books";
     $stmt = $this->db->prepare($sql);
-    $stmt->fetchAll();
+    $stmt->execute();
+    $result = $stmt->fetchAll();
     return $response->withJson(["status" => "success", "data" => $result], 200);
 });
 
