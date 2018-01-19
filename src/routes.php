@@ -2,6 +2,7 @@
 
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Slim\Http\UploadedFile;
 
 // Routes
 
@@ -98,3 +99,37 @@ $app->delete("/books/{id}", function (Request $request, Response $response, $arg
     return $response->withJson(["status" => "failed", "data" => "0"], 200);
 });
 
+//upload file
+$app->post('/books/cover/{id}', function(Request $request, Response $response, $args) {
+    
+    $uploadedFiles = $request->getUploadedFiles();
+    
+    // handle single input with single file upload
+    $uploadedFile = $uploadedFiles['cover'];
+    if ($uploadedFile->getError() === UPLOAD_ERR_OK) {
+        
+        $extension = pathinfo($uploadedFile->getClientFilename(), PATHINFO_EXTENSION);
+        
+        // ubah nama file dengan id buku
+        $filename = sprintf('%s.%0.8s', $args["id"], $extension);
+        
+        $directory = $this->get('settings')['upload_directory'];
+        $uploadedFile->moveTo($directory . DIRECTORY_SEPARATOR . $filename);
+
+        // simpan nama file ke database
+        $sql = "UPDATE books SET cover=:cover WHERE book_id=:id";
+        $stmt = $this->db->prepare($sql);
+        $params = [
+            ":id" => $args["id"],
+            ":cover" => $filename
+        ];
+        
+        if($stmt->execute($params)){
+            // ambil base url dan gabungkan dengan file name untuk membentuk URL file
+            $url = $request->getUri()->getBaseUrl()."/uploads/".$filename;
+            return $response->withJson(["status" => "success", "data" => $url], 200);
+        }
+        
+        return $response->withJson(["status" => "failed", "data" => "0"], 200);
+    }
+});
